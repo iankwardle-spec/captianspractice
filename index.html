@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swim Set Builder</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: -apple-system, Arial;
+  background: #0b1d2a;
+  color: white;
+  text-align: center;
+}
+
+.container { padding: 20px; }
+
+.card {
+  background: #132f44;
+  border-radius: 16px;
+  padding: 15px;
+  margin: 15px 0;
+}
+
+.card.red {
+  background: #7a1f1f;
+}
+
+.set-line {
+  margin: 8px 0;
+  font-size: 18px;
+}
+
+button {
+  width: 90%;
+  padding: 18px;
+  margin: 10px;
+  font-size: 18px;
+  border-radius: 12px;
+  border: none;
+  background: #1e90ff;
+  color: white;
+}
+
+.hidden { display: none; }
+
+.lane-title {
+  font-size: 20px;
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🏊 Swim Set</h2>
+<div>Round <span id="round">1</span>/6</div>
+<div class="lane-title" id="laneText"></div>
+
+<div class="card" id="setCard">
+  <div id="intervalDisplay"></div>
+  <div id="setBreakdown"></div>
+</div>
+
+<button id="startBtn" onclick="start()">START</button>
+
+<div id="choiceBox" class="hidden">
+  <h3 id="chooseLabel"></h3>
+  <button id="opt1"></button>
+  <button id="opt2"></button>
+</div>
+
+</div>
+
+<script>
+let round = 1;
+let lane = 1;
+let interval = 50;
+let mods = [];
+
+const rounds = {
+  1: ["Fast breakout first 25", "Fast in & out of walls"],
+  2: ["Underwater halfway (1st 25)", "Breathing every 5/7"],
+  3: ["2nd 50 stroke", "No breath last 12.5"],
+  4: ["-5 interval", "3rd 50 ALL OUT"],
+  5: ["IMO (no free) +5 interval", "Last 25 fast"],
+  6: ["NO GOGGLES", "ALL FLY FAST @ :55"]
+};
+
+function formatTime(sec) {
+  return `:${sec}`;
+}
+
+/* PREVIEW */
+function renderPreview() {
+  document.getElementById("intervalDisplay").innerHTML =
+    `<strong>Interval: :50</strong>`;
+
+  document.getElementById("setBreakdown").innerHTML = `
+    <div class="set-line">1) 50 Free</div>
+    <div class="set-line">2) 50 Free</div>
+    <div class="set-line">3) 50 Free</div>
+  `;
+
+  document.getElementById("laneText").innerText = "Lane 1 ready";
+}
+
+/* START */
+function start() {
+  document.getElementById("startBtn").innerText = "NEXT";
+  showChoices();
+}
+
+/* BUILD SET */
+function buildSet() {
+  let isFly = mods.includes("ALL FLY");
+  let card = document.getElementById("setCard");
+
+  card.classList.toggle("red", mods.includes("NO GOGGLES") || isFly);
+
+  if (isFly) {
+    interval = 55; // 🔒 LOCKED
+    return [
+      "1) 50 Butterfly",
+      "2) 50 Butterfly",
+      "3) 50 Butterfly"
+    ];
+  }
+
+  let lines = ["50 Free", "50 Free", "50 Free"];
+
+  if (mods.includes("2nd 50 stroke")) {
+    lines[1] = "50 Stroke";
+  }
+
+  if (mods.includes("IMO (no free) +5 interval")) {
+    lines = ["50 Fly", "50 Back", "50 Breast"];
+  }
+
+  return lines.map((line, i) => {
+    let notes = [];
+    let isFree = line.includes("Free");
+
+    let allOut = mods.includes("3rd 50 ALL OUT");
+    let lastFast = mods.includes("Last 25 fast");
+
+    // 🔥 PRIORITY RULE
+    if (allOut && i === 2) {
+      notes.push("ALL OUT");
+    } else {
+      if (lastFast) notes.push("last 25 fast");
+    }
+
+    if (mods.includes("Fast breakout first 25")) {
+      notes.push("fast breakout");
+    }
+
+    if (mods.includes("Fast in & out of walls")) {
+      notes.push("fast walls");
+    }
+
+    if (mods.includes("No breath last 12.5")) {
+      notes.push("no breath last 12.5");
+    }
+
+    if (mods.includes("Underwater halfway (1st 25)")) {
+      notes.push("UW halfway 1st 25");
+    }
+
+    if (mods.includes("Breathing every 5/7") && isFree) {
+      notes.push("breathing 5/7");
+    }
+
+    return `${i+1}) ${line}${notes.length ? " — " + notes.join(", ") : ""}`;
+  });
+}
+
+/* UPDATE UI */
+function updateUI() {
+  document.getElementById("round").innerText = round;
+  document.getElementById("laneText").innerText = `Lane ${lane} choose:`;
+
+  document.getElementById("intervalDisplay").innerHTML =
+    `<strong>Interval: ${formatTime(interval)}</strong>`;
+
+  let set = buildSet();
+  let box = document.getElementById("setBreakdown");
+  box.innerHTML = "";
+
+  set.forEach(l => {
+    let div = document.createElement("div");
+    div.className = "set-line";
+    div.innerText = l;
+    box.appendChild(div);
+  });
+}
+
+/* CHOICES */
+function showChoices() {
+  let opts = rounds[round];
+  if (!opts) return finish();
+
+  document.getElementById("choiceBox").classList.remove("hidden");
+  document.getElementById("chooseLabel").innerText = `Lane ${lane} choose:`;
+
+  document.getElementById("opt1").innerText = opts[0];
+  document.getElementById("opt2").innerText = opts[1];
+
+  document.getElementById("opt1").onclick = () => choose(opts[0]);
+  document.getElementById("opt2").onclick = () => choose(opts[1]);
+}
+
+/* CHOOSE */
+function choose(choice) {
+  document.getElementById("choiceBox").classList.add("hidden");
+
+  if (choice === "ALL FLY FAST @ :55") {
+    mods = ["ALL FLY"];
+    interval = 55; // 🔒 LOCKED
+  } else {
+    mods.push(choice);
+
+    if (choice === "-5 interval") {
+      interval = Math.max(30, interval - 5);
+    }
+
+    if (choice === "IMO (no free) +5 interval") {
+      interval += 5;
+    }
+  }
+
+  if (round >= 6) {
+    finish();
+    return;
+  }
+
+  round++;
+  lane++;
+  updateUI();
+}
+
+/* FINAL */
+function finish() {
+  document.getElementById("choiceBox").remove();
+  document.getElementById("startBtn").remove();
+  document.getElementById("laneText").innerText = "Final Set";
+
+  document.getElementById("setBreakdown").innerHTML =
+    buildSet().map(l => `<div class="set-line">${l}</div>`).join("");
+}
+
+/* INIT */
+renderPreview();
+updateUI();
+</script>
+
+</body>
+</html>
